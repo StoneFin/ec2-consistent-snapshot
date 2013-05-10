@@ -17,7 +17,10 @@ OPTIONS
 
     -n --noaction
         Don't do it. Just say what you would have done.
-
+    -c --compute-volumes
+        Get the volume IDs to snapshot from the aws api. Will snapshot all
+        volumes > 100gb attached to this instance and set their descriptions to
+        `hostname` - `date` - /dev/mountpoint
     --aws-access-key-id KEY
     --aws-secret-access-key SECRET
         Amazon AWS access key and secret access key. Defaults to environment
