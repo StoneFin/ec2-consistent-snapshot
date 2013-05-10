@@ -57,13 +57,16 @@ my $pre_freeze_command         = undef;
 my $post_thaw_command          = undef;
 my $mongo_init_script                = '/etc/init.d/mongod';
 
+# get the volumes attached to this instance from the api
+my $get_volumes_from_api 	   = 0;
+
 Getopt::Long::config('no_ignore_case');
 GetOptions(
   'help|h|?'                     => \$Help,
   'debug|d'                      => \$Debug,
   'quiet|q'                      => \$Quiet,
   'noaction|n'                   => \$Noaction,
-
+  'compute-volumes|c'			 => \$get_volumes_from_api,
   'aws-access-key-id=s'          => \$aws_access_key_id,
   'aws-secret-access-key=s'      => \$aws_secret_access_key,
   'aws-access-key-id-file=s'     => \$aws_access_key_id_file,
@@ -94,7 +97,7 @@ GetOptions(
   'lock-sleep=s'                 => \$lock_sleep,
   'pre-freeze-command=s'         => \$pre_freeze_command,
   'post-thaw-command=s'          => \$post_thaw_command,
-  'mongo-init=s'                       => \$mongo_init_script,
+  'mongo-init=s'                 => \$mongo_init_script,
 ) or pod2usage(2);
 
 my $filesystem_frozen = 0;
@@ -102,7 +105,9 @@ my $filesystem_frozen = 0;
 pod2usage(1) if $Help;
 
 my @volume_ids = @ARGV;
-pod2usage(2) unless scalar @volume_ids;
+if(!$get_volumes_from_api) {
+	pod2usage(2) unless scalar @volume_ids;
+}
 
 $ec2_endpoint ||= "https://ec2.$region.amazonaws.com" if $region;
 
@@ -120,6 +125,10 @@ $freeze_cmd    = "xfs_freeze"
 die "$Prog: ERROR: Can't find AWS access key or secret access key"
   unless $aws_access_key_id and $aws_secret_access_key;
 $Debug and warn "$Prog: Using AWS access key: $aws_access_key_id\n";
+
+if($get_volumes_from_api) {
+	getVolumesAndDescriptions();
+}
 
 die "$Prog: ERROR: Descriptions count (", scalar (@descriptions),
     ") does not match volumes count (", scalar (@volume_ids), ")"
@@ -216,7 +225,39 @@ END {
 }
 
 #---- METHODS ----
+sub set_volumes_and_descriptions {
+  my $ec2 = Net::Amazon::EC2->new(
+    AWSAccessKeyId  => $aws_access_key_id,
+    SecretAccessKey => $aws_secret_access_key,
+    ($ec2_endpoint ? (base_url => $ec2_endpoint) : ()),
+    # ($Debug ? (debug => 1) : ()),
+  );
 
+  my $allVolumes = $ec2->describe_volumes();
+  my $instanceID = `wget -q -O - http://169.254.169.254/latest/meta-data/instance-id`;
+  my $hostName = `hostname`;
+  chomp($hostName);
+  my $descrBegin = $hostName . " - " . getTime() . " - ";
+  foreach my $vol (@$allVolumes) {
+    my $attachmentsRef = $vol->attachments;
+    foreach my $att (@$attachmentsRef) {
+      if($att->instance_id eq $instanceID && $vol->size > 100) {
+        #print $att->device;
+        #print " - ";
+        #print $att->instance_id;
+        #print $vol->volume_id;
+        #print " - ";
+        #print $vol->size;
+        #println();
+        push(@volume_ids,$vol->volume_id);
+        my $volDescr = $descrBegin . $att->device;
+        push(@descriptions, $volDescr);
+        #print $volDescr;
+        #println();
+      }
+    }
+  }
+}
 sub ebs_snapshot {
   my ($volume_ids, $ec2_endpoint, $descriptions) = @_;
 
