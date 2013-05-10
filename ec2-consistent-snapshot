@@ -66,7 +66,7 @@ GetOptions(
   'debug|d'                      => \$Debug,
   'quiet|q'                      => \$Quiet,
   'noaction|n'                   => \$Noaction,
-  'compute-volumes|c'			 => \$get_volumes_from_api,
+  'compute-volumes|c'			       => \$get_volumes_from_api,
   'aws-access-key-id=s'          => \$aws_access_key_id,
   'aws-secret-access-key=s'      => \$aws_secret_access_key,
   'aws-access-key-id-file=s'     => \$aws_access_key_id_file,
@@ -127,7 +127,7 @@ die "$Prog: ERROR: Can't find AWS access key or secret access key"
 $Debug and warn "$Prog: Using AWS access key: $aws_access_key_id\n";
 
 if($get_volumes_from_api) {
-	getVolumesAndDescriptions();
+	set_volumes_and_descriptions();
 }
 
 die "$Prog: ERROR: Descriptions count (", scalar (@descriptions),
