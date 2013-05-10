@@ -260,7 +260,7 @@ sub set_volumes_and_descriptions {
 }
 
 sub get_time {
-  my $time = `time`;
+  my $time = `date`;
   chomp($time);
   return $time;
 }
