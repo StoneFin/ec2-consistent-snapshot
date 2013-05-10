@@ -237,7 +237,7 @@ sub set_volumes_and_descriptions {
   my $instanceID = `wget -q -O - http://169.254.169.254/latest/meta-data/instance-id`;
   my $hostName = `hostname`;
   chomp($hostName);
-  my $descrBegin = $hostName . " - " . getTime() . " - ";
+  my $descrBegin = $hostName . " - " . get_time() . " - ";
   foreach my $vol (@$allVolumes) {
     my $attachmentsRef = $vol->attachments;
     foreach my $att (@$attachmentsRef) {
@@ -258,6 +258,13 @@ sub set_volumes_and_descriptions {
     }
   }
 }
+
+sub get_time {
+  my $time = `time`;
+  chomp($time);
+  return $time;
+}
+
 sub ebs_snapshot {
   my ($volume_ids, $ec2_endpoint, $descriptions) = @_;
 
